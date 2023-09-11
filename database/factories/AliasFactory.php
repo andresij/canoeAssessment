@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
+use App\Models\Fund;
 
 class AliasFactory extends Factory
 {
@@ -14,7 +15,8 @@ class AliasFactory extends Factory
     public function definition()
     {
         return [
-            //
+            'fund_id' => Fund::factory(),
+            'alias' => $this->faker->company()
         ];
     }
 }

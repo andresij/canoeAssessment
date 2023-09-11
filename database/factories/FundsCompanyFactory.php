@@ -3,6 +3,8 @@
 namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
+use App\Models\Fund;
+use App\Models\Company;
 
 class FundsCompanyFactory extends Factory
 {
@@ -14,7 +16,8 @@ class FundsCompanyFactory extends Factory
     public function definition()
     {
         return [
-            //
+            'fund_id' => Fund::factory(),
+            'company_id' => Company::factory()
         ];
     }
 }
