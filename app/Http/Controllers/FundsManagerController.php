@@ -19,7 +19,11 @@ class FundsManagerController extends Controller
      */
     public function index()
     {
-        return new FundsManagerCollection(FundsManager::all());
+        try {
+            return new FundsManagerCollection(FundsManager::all());
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 
     /**

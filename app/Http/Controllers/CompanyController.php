@@ -19,7 +19,11 @@ class CompanyController extends Controller
      */
     public function index()
     {
-        return new CompanyCollection(Company::all());
+        try {
+            return new CompanyCollection(Company::all());
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 
     /**

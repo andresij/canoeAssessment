@@ -36,13 +36,17 @@ class FundController extends Controller
             $filter[] =  ['start_year', $request->startYear];
         }
 
-        return new FundCollection(
-            Fund::where($filter)
-                ->with('fundsManager')
-                ->with('aliases')
-                ->with('companies')
-                ->get()
-        );
+        try {
+            return new FundCollection(
+                Fund::where($filter)
+                    ->with('fundsManager')
+                    ->with('aliases')
+                    ->with('companies')
+                    ->get()
+            );
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 
     /**
@@ -63,15 +67,18 @@ class FundController extends Controller
      */
     public function store(StoreFundRequest $request)
     {
-        //first verify duplicate, then add fund
-        $duplicate = $this->verifyDuplicate($request);
-        $newFund = Fund::create($request->all());
-        //if duplicate was verified, trigger event including the added fund
-        if ($duplicate) {
-            event (new DuplicateFundWarningEvent($newFund));
+        try {
+            //first verify duplicate, then add fund
+            $duplicate = $this->verifyDuplicate($request);
+            $newFund = Fund::create($request->all());
+            //if duplicate was verified, trigger event including the added fund
+            if ($duplicate) {
+                event (new DuplicateFundWarningEvent($newFund));
+            }
+            return response(new FundResource ($newFund), 201);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
         }
-
-        return response(new FundResource ($newFund), 201);
     }
 
     /**
@@ -82,11 +89,15 @@ class FundController extends Controller
      */
     public function show(Fund $fund)
     {
-        return new FundResource ($fund
-            ->loadMissing('fundsManager')
-            ->loadMissing('aliases')
-            ->loadMissing('companies')
-        );
+        try {
+            return new FundResource ($fund
+                ->loadMissing('fundsManager')
+                ->loadMissing('aliases')
+                ->loadMissing('companies')
+            );
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 
     /**
@@ -109,25 +120,29 @@ class FundController extends Controller
      */
     public function update(UpdateFundRequest $request, Fund $fund)
     {
-        $fund->update($request->all());
-        if ($request->aliases) {
-            $newAliases = [];
-            foreach ($request->aliases as $alias) {
-                $newAliases[] = ['fund_id' => $fund->id, 'alias' => $alias];
+        try {
+            $fund->update($request->all());
+            if ($request->aliases) {
+                $newAliases = [];
+                foreach ($request->aliases as $alias) {
+                    $newAliases[] = ['fund_id' => $fund->id, 'alias' => $alias];
+                }
+                Alias::where('fund_id', $fund->id)->delete();
+                Alias::insert($newAliases);
             }
-            Alias::where('fund_id', $fund->id)->delete();
-            Alias::upsert($newAliases, ['fund_id'], ['alias']);
-        }
 
-        if ($request->companies) {
-            $newCompanies = [];
-            foreach ($request->companies as $company_id) {
-                $newCompanies[] = ['fund_id' => $fund->id, 'company_id' => $company_id];
+            if ($request->companies) {
+                $newCompanies = [];
+                foreach ($request->companies as $company_id) {
+                    $newCompanies[] = ['fund_id' => $fund->id, 'company_id' => $company_id];
+                }
+                FundsCompany::where('fund_id', $fund->id)->delete();
+                FundsCompany::insert($newCompanies);
             }
-            FundsCompany::where('fund_id', $fund->id)->delete();
-            FundsCompany::upsert($newCompanies, ['fund_id'], ['company_id']);
+            return response('', 204);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
         }
-        return response('', 204);
     }
 
     /**
@@ -166,11 +181,6 @@ class FundController extends Controller
                     ->orWhere ('aliases.alias','=', $request->name);
             })
             ->count();
-
-        if ($result > 0) {
-            return true;
-        } else {
-            return false;
-        }
+        return ($result > 0);
     }
 }
